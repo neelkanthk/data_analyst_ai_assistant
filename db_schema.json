@@ -1,0 +1,274 @@
+{
+  "table_1": {
+    "table_name": "addresses",
+    "columns": {
+      "address_id": "integer",
+      "customer_id": "integer",
+      "address_type": "character varying",
+      "street_address": "text",
+      "city": "character varying",
+      "state": "character varying",
+      "postal_code": "character varying",
+      "country": "character varying",
+      "is_default": "boolean"
+    }
+  },
+  "table_2": {
+    "table_name": "categories",
+    "columns": {
+      "category_id": "integer",
+      "category_name": "character varying",
+      "description": "text"
+    }
+  },
+  "table_3": {
+    "table_name": "customers",
+    "columns": {
+      "customer_id": "integer",
+      "first_name": "character varying",
+      "last_name": "character varying",
+      "email": "character varying",
+      "phone": "character varying",
+      "date_of_birth": "date",
+      "registration_date": "timestamp without time zone",
+      "customer_status": "character varying"
+    }
+  },
+  "table_4": {
+    "table_name": "inventory",
+    "columns": {
+      "inventory_id": "integer",
+      "product_id": "integer",
+      "quantity_available": "integer",
+      "quantity_reserved": "integer",
+      "warehouse_location": "character varying",
+      "last_updated": "timestamp without time zone"
+    }
+  },
+  "table_5": {
+    "table_name": "order_items",
+    "columns": {
+      "order_item_id": "integer",
+      "order_id": "integer",
+      "product_id": "integer",
+      "quantity": "integer",
+      "unit_price": "numeric",
+      "discount": "numeric",
+      "subtotal": "numeric"
+    }
+  },
+  "table_6": {
+    "table_name": "orders",
+    "columns": {
+      "order_id": "integer",
+      "customer_id": "integer",
+      "order_date": "timestamp without time zone",
+      "shipping_address_id": "integer",
+      "order_status": "character varying",
+      "total_amount": "numeric",
+      "discount_amount": "numeric",
+      "shipping_cost": "numeric",
+      "payment_method": "character varying",
+      "payment_status": "character varying",
+      "delivery_date": "date"
+    }
+  },
+  "table_7": {
+    "table_name": "products",
+    "columns": {
+      "product_id": "integer",
+      "category_id": "integer",
+      "product_name": "character varying",
+      "description": "text",
+      "price": "numeric",
+      "cost_price": "numeric",
+      "sku": "character varying",
+      "weight_kg": "numeric",
+      "created_at": "timestamp without time zone"
+    }
+  },
+  "table_8": {
+    "table_name": "reviews",
+    "columns": {
+      "review_id": "integer",
+      "product_id": "integer",
+      "customer_id": "integer",
+      "rating": "integer",
+      "review_text": "text",
+      "review_date": "timestamp without time zone"
+    }
+  },
+  "constraints": [
+    {
+      "type": "PRIMARY KEY",
+      "table": "addresses",
+      "column": "address_id",
+      "references": {
+        "table": "addresses",
+        "column": "address_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "addresses",
+      "column": "customer_id",
+      "references": {
+        "table": "customers",
+        "column": "customer_id"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "categories",
+      "column": "category_id",
+      "references": {
+        "table": "categories",
+        "column": "category_id"
+      }
+    },
+    {
+      "type": "UNIQUE",
+      "table": "customers",
+      "column": "email",
+      "references": {
+        "table": "customers",
+        "column": "email"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "customers",
+      "column": "customer_id",
+      "references": {
+        "table": "customers",
+        "column": "customer_id"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "inventory",
+      "column": "inventory_id",
+      "references": {
+        "table": "inventory",
+        "column": "inventory_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "inventory",
+      "column": "product_id",
+      "references": {
+        "table": "products",
+        "column": "product_id"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "order_items",
+      "column": "order_item_id",
+      "references": {
+        "table": "order_items",
+        "column": "order_item_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "order_items",
+      "column": "order_id",
+      "references": {
+        "table": "orders",
+        "column": "order_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "order_items",
+      "column": "product_id",
+      "references": {
+        "table": "products",
+        "column": "product_id"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "orders",
+      "column": "order_id",
+      "references": {
+        "table": "orders",
+        "column": "order_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "orders",
+      "column": "customer_id",
+      "references": {
+        "table": "customers",
+        "column": "customer_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "orders",
+      "column": "shipping_address_id",
+      "references": {
+        "table": "addresses",
+        "column": "address_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "products",
+      "column": "category_id",
+      "references": {
+        "table": "categories",
+        "column": "category_id"
+      }
+    },
+    {
+      "type": "UNIQUE",
+      "table": "products",
+      "column": "sku",
+      "references": {
+        "table": "products",
+        "column": "sku"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "products",
+      "column": "product_id",
+      "references": {
+        "table": "products",
+        "column": "product_id"
+      }
+    },
+    {
+      "type": "PRIMARY KEY",
+      "table": "reviews",
+      "column": "review_id",
+      "references": {
+        "table": "reviews",
+        "column": "review_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "reviews",
+      "column": "product_id",
+      "references": {
+        "table": "products",
+        "column": "product_id"
+      }
+    },
+    {
+      "type": "FOREIGN KEY",
+      "table": "reviews",
+      "column": "customer_id",
+      "references": {
+        "table": "customers",
+        "column": "customer_id"
+      }
+    }
+  ]
+}
