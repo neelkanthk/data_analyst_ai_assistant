@@ -2,7 +2,7 @@ import json
 import os
 from sqlalchemy import create_engine, inspect, MetaData
 from sqlalchemy.engine.url import URL
-import database
+from config import database
 
 
 def get_db_schema(connection_string=None, schema_name=None, **kwargs):
