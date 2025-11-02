@@ -1,47 +1,78 @@
-import psycopg2
 import json
 import os
+from sqlalchemy import create_engine, inspect, MetaData
+from sqlalchemy.engine.url import URL
 import database
 
 
-def get_db_schema(host, dbname, user, password, port=5432, schema_name="public"):
+def get_db_schema(connection_string=None, schema_name=None, **kwargs):
     """
-    Connects to PostgreSQL and returns a JSON-like schema
-    of all user tables (not system tables) and their columns with data types.
-    """
-    conn = psycopg2.connect(
-        host=host,
-        database=dbname,
-        user=user,
-        password=password,
-        port=port
-    )
-    cursor = conn.cursor()
+    Connects to any SQLAlchemy-supported database and returns a JSON-like schema
+    of all tables and their columns with data types.
 
-    # Fetch only user tables from the given schema
-    cursor.execute("""
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = %s
-          AND table_type = 'BASE TABLE'
-        ORDER BY table_name;
-    """, (schema_name,))
-    tables = [t[0] for t in cursor.fetchall()]
+    Args:
+        connection_string: Full database URL (e.g., 'postgresql://user:pass@host:port/db')
+        schema_name: Schema to inspect (for databases that support schemas like PostgreSQL)
+        **kwargs: Alternative connection parameters (db_type, host, dbname, user, password, port)
+
+    Returns:
+        dict: Schema information including tables, columns, and constraints
+    """
+    # Create connection string if not provided
+    if not connection_string:
+        db_type = kwargs.get('db_type', 'postgresql')
+        host = kwargs.get('db_host')
+        dbname = kwargs.get('db_name')
+        user = kwargs.get('db_username')
+        password = kwargs.get('db_password')
+        port = kwargs.get('db_port', 5432 if db_type == 'postgresql' else 3306)
+
+        # Build connection string based on database type
+        if db_type == 'mysql':
+            driver = 'pymysql'  # or 'mysqlconnector'
+            connection_string = f"mysql+{driver}://{user}:{password}@{host}:{port}/{dbname}"
+        elif db_type == 'postgresql':
+            driver = 'psycopg2'
+            connection_string = f"postgresql+{driver}://{user}:{password}@{host}:{port}/{dbname}"
+        elif db_type == 'sqlite':
+            connection_string = f"sqlite:///{dbname}"
+        elif db_type == 'mssql':
+            driver = 'pymssql'
+            connection_string = f"mssql+{driver}://{user}:{password}@{host}:{port}/{dbname}"
+        elif db_type == 'oracle':
+            driver = 'cx_oracle'
+            connection_string = f"oracle+{driver}://{user}:{password}@{host}:{port}/{dbname}"
+        else:
+            raise ValueError(f"Unsupported database type: {db_type}")
+
+    # Create engine and inspector
+    engine = create_engine(connection_string)
+    inspector = inspect(engine)
+
+    # Get schema name based on database type
+    if schema_name is None:
+        db_dialect = engine.dialect.name
+        if db_dialect == 'postgresql':
+            schema_name = 'public'
+        elif db_dialect == 'mysql':
+            schema_name = engine.url.database
+        # For SQLite, schema_name should be None
+
+    # Get all table names
+    table_names = inspector.get_table_names(schema=schema_name)
 
     schema = {}
     table_index = 1
 
-    for table_name in tables:
-        # Fetch column names and data types
-        cursor.execute("""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_schema = %s AND table_name = %s
-            ORDER BY ordinal_position;
-        """, (schema_name, table_name))
-        columns = cursor.fetchall()
+    for table_name in table_names:
+        # Get column information
+        columns = inspector.get_columns(table_name, schema=schema_name)
 
-        column_schema = {col: dtype for col, dtype in columns}
+        column_schema = {}
+        for col in columns:
+            # Convert SQLAlchemy type to string
+            col_type = str(col['type'])
+            column_schema[col['name']] = col_type
 
         schema[f"table_{table_index}"] = {
             "table_name": table_name,
@@ -50,57 +81,62 @@ def get_db_schema(host, dbname, user, password, port=5432, schema_name="public")
 
         table_index += 1
 
-    # Fetch constraints only for these user tables
-    cursor.execute("""
-        SELECT
-            tc.constraint_type,
-            tc.table_name,
-            kcu.column_name,
-            ccu.table_name AS foreign_table,
-            ccu.column_name AS foreign_column
-        FROM
-            information_schema.table_constraints AS tc
-        LEFT JOIN
-            information_schema.key_column_usage AS kcu
-            ON tc.constraint_name = kcu.constraint_name
-            AND tc.table_schema = kcu.table_schema
-        LEFT JOIN
-            information_schema.constraint_column_usage AS ccu
-            ON ccu.constraint_name = tc.constraint_name
-            AND ccu.table_schema = tc.table_schema
-        WHERE
-            tc.table_schema = %s
-            AND tc.constraint_type IN ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE')
-        ORDER BY tc.table_name;
-    """, (schema_name,))
-
+    # Collect constraints
     constraints = []
-    for row in cursor.fetchall():
-        constraint_type, table_name, column_name, foreign_table, foreign_column = row
-        if table_name not in tables:
-            # Skip system tables like pg_*
-            continue
-        constraints.append({
-            "type": constraint_type,
-            "table": table_name,
-            "column": column_name,
-            "references": {
-                "table": foreign_table,
-                "column": foreign_column
-            } if foreign_table else None
-        })
+
+    for table_name in table_names:
+        # Primary keys
+        pk = inspector.get_pk_constraint(table_name, schema=schema_name)
+        if pk and pk.get('constrained_columns'):
+            for col in pk['constrained_columns']:
+                constraints.append({
+                    "type": "PRIMARY KEY",
+                    "table": table_name,
+                    "column": col,
+                    "references": None
+                })
+
+        # Foreign keys
+        fks = inspector.get_foreign_keys(table_name, schema=schema_name)
+        for fk in fks:
+            constrained_cols = fk.get('constrained_columns', [])
+            referred_cols = fk.get('referred_columns', [])
+            referred_table = fk.get('referred_table')
+
+            for i, col in enumerate(constrained_cols):
+                constraints.append({
+                    "type": "FOREIGN KEY",
+                    "table": table_name,
+                    "column": col,
+                    "references": {
+                        "table": referred_table,
+                        "column": referred_cols[i] if i < len(referred_cols) else None
+                    }
+                })
+
+        # Unique constraints
+        unique_constraints = inspector.get_unique_constraints(table_name, schema=schema_name)
+        for uc in unique_constraints:
+            for col in uc.get('column_names', []):
+                constraints.append({
+                    "type": "UNIQUE",
+                    "table": table_name,
+                    "column": col,
+                    "references": None
+                })
 
     schema["constraints"] = constraints
 
-    cursor.close()
-    conn.close()
+    # Close connection
+    engine.dispose()
 
     return schema
 
 
 if __name__ == "__main__":
-    # Update with your PostgreSQL credentials
+    # Example 1: PostgreSQL (using database.py config)
     db_config = {
+        "db_type": "postgresql",  # or "mysql", "sqlite", "mssql", "oracle"
         "host": database.host,
         "dbname": database.database_name,
         "user": database.username,
@@ -108,12 +144,29 @@ if __name__ == "__main__":
         "port": database.port
     }
 
-    # Generate schema for the "public" schema only
-    schema = get_db_schema(**db_config, schema_name="public")
+    # Example 2: MySQL configuration (uncomment to use)
+    # db_config = {
+    #     "db_type": "mysql",
+    #     "host": "localhost",
+    #     "dbname": "your_database",
+    #     "user": "your_user",
+    #     "password": "your_password",
+    #     "port": 3306
+    # }
+
+    # Example 3: Using connection string directly
+    # connection_string = "mysql+pymysql://user:password@localhost:3306/database"
+    # schema = get_db_schema(connection_string=connection_string)
+
+    # Generate schema
+    schema = get_db_schema(**db_config)
 
     # Save schema to file
-    output_file = "db_schema.json"
+    db_name = db_config.get('dbname', 'database')
+    output_file = f"db_schema_{db_name}.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2)
 
-    print(f"✅ Cleaned database schema saved to: {os.path.abspath(output_file)}")
+    print(f"✅ Database schema saved to: {os.path.abspath(output_file)}")
+    print(f"📊 Found {len([k for k in schema.keys() if k.startswith('table_')])} tables")
+    print(f"🔗 Found {len(schema.get('constraints', []))} constraints")
