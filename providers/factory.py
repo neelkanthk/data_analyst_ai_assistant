@@ -1,5 +1,6 @@
 from providers.providertypes import InferenceProviderType
 from providers.google_gemini_adapter import GoogleGeminiAdapter
+from providers.aws_bedrock_adapter import AWSBedrockAdapter
 from providers.abstract import InferenceProviderAbstractClass
 
 
@@ -8,6 +9,7 @@ class InferenceProviderFactory:
 
     _providers = {
         InferenceProviderType.GEMINI: GoogleGeminiAdapter,
+        InferenceProviderType.BEDROCK: AWSBedrockAdapter
     }
 
     @classmethod

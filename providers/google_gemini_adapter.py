@@ -1,7 +1,6 @@
 from google import genai
 from google.genai import types
 from providers.abstract import InferenceProviderAbstractClass
-from providers.providertypes import InferenceProviderType
 
 
 class GoogleGeminiAdapter(InferenceProviderAbstractClass):
