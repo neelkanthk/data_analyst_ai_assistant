@@ -37,14 +37,16 @@ class User(Base):
 class Connection(Base):
     __tablename__ = 'connections'
     id = Column(Integer, primary_key=True, nullable=False)
-    db_connection_name = Column(String, nullable=False, unique=True)
-    db_type = Column(String, nullable=False)
-    db_name = Column(String, nullable=False)
-    db_host = Column(String, nullable=True)
-    db_port = Column(Integer, nullable=True)
-    db_username = Column(String, nullable=True)
-    db_password = Column(String, nullable=True)
-    db_schema = Column(Text, nullable=True)
+    db_connection_name = Column(String, nullable=False, unique=True)  # A unique name of the database connection
+    db_type = Column(String, nullable=False)  # Type of Datavase: mysql, postgresql, sqlite, mssql
+    db_name = Column(String, nullable=False)  # Name of the database to connect with
+    db_host = Column(String, nullable=True)  # Hostname or IP address of the database server
+    db_port = Column(Integer, nullable=True)  # Port of the database server
+    db_username = Column(String, nullable=True)  # Username of the database
+    db_password = Column(String, nullable=True)  # Password of the database
+    db_schema = Column(Text, nullable=True)  # Database schema in JSON format to be used in system prompt
+
+    # ID of the user who created connection (for future use)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(TIMESTAMP(timezone=True), nullable=True)

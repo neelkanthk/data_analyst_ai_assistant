@@ -7,34 +7,34 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def query_extractor(llm_response: str) -> str:
+def query_extractor(text: str) -> str:
     # Step 2: Extract SQL query from the response
-    start = "```sql"
-    end = "```"
+    start = "<sql>"
+    end = "</sql>"
 
-    start_index = llm_response.find(start)
-    end_index = llm_response.find(end, start_index + len(start))
+    start_index = text.find(start)
+    end_index = text.find(end, start_index + len(start))
 
     # Check if both delimiters are found and extract the substring between them
     if start_index != -1 and end_index != -1:
-        res = llm_response[start_index + len(start):end_index]
+        res = text[start_index + len(start):end_index]
         sql_query = res.strip()
         return sql_query
     else:
         raise ValueError("Delimiters not found")
 
 
-def error_extractor(llm_response: str) -> str:
+def error_extractor(text: str) -> str:
     # Step 2: Extract SQL query from the response
     start = "```error"
     end = "```"
 
-    start_index = llm_response.find(start)
-    end_index = llm_response.find(end, start_index + len(start))
+    start_index = text.find(start)
+    end_index = text.find(end, start_index + len(start))
 
     # Check if both delimiters are found and extract the substring between them
     if start_index != -1 and end_index != -1:
-        res = llm_response[start_index + len(start):end_index]
+        res = text[start_index + len(start):end_index]
         error_message = res.strip()
         return error_message
     else:
@@ -59,12 +59,24 @@ def generate_sql_from_user_query(user_question: str, db_schema: str) -> str:
     # # Convert it back to a formatted JSON string
     # db_schema = json.dumps(schema_json, indent=2)
     prompt = f"""
-            You are an SQL expert. 
-            Convert the user's question into a valid PostgreSQL query. Only use SELECT statements.
-            The response should only contain the SQL query without any explanations.
-            Use following database schema to create the query:
+            You are a highly intelligent SQL query generator. Your role is to:
+            1. Analyze the natural language query carefully
+            2. Understand the database schema structure
+            3. Identify relevant tables, columns, and relationships
+            4. Generate correct, optimized SQL queries
+            5. Follow standard SQL syntax
+            6. Only generate SQL queries that are safe to run (i.e., only SELECT statements)
+
+            Key Guidelines:
+            - Use only columns and tables present in the schema
+            - Pay attention to data types and constraints
+            - Consider foreign key relationships for joins
+            - Optimize for performance when possible
+            - Return only the SQL query without explanations
+
+            Use following Database Schema to create the query:
             {db_schema}
-            User: {user_question}
+            User Question in Natural Language: {user_question}
             SQL:
         """
     gemini_api_key = os.getenv("GEMINI_API_KEY")
