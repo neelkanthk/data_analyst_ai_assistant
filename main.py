@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from config import database
+from database import models
 from sqlalchemy import create_engine
 from routes.models import *
 from routes import connections, chat
 
 app = FastAPI()
 
-engine = database.engine
+engine = models.engine
 
 app.add_middleware(
     CORSMiddleware,
