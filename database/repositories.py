@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from config.database import Connection
+from database.models import Connection
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from schema_builder import get_db_schema
 import json

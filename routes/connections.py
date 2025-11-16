@@ -1,18 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from config import database
+from database import models, repositories
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import Session
 from typing import List
 import json
 from routes.models import *
-from repositories import ConnectionRepository
+from database.repositories import ConnectionRepository
 
 
 router = APIRouter(prefix="/connections", tags=["Connections"])
 
 
 @router.post("/", status_code=status.HTTP_200_OK)
-def add_connection(request: AddConnectionRequest, db: Session = Depends(database.get_db)):
+def add_connection(request: AddConnectionRequest, db: Session = Depends(models.get_db)):
     data = request.model_dump(exclude_unset=True)
     repository = ConnectionRepository(db)
     try:
@@ -31,7 +31,7 @@ def add_connection(request: AddConnectionRequest, db: Session = Depends(database
 
 
 @router.get('/', response_model=List[ConnectionListResponse])
-def get_connections(db: Session = Depends(database.get_db)):
+def get_connections(db: Session = Depends(models.get_db)):
     repository = ConnectionRepository(db)
     try:
         connections = repository.all()
@@ -44,7 +44,7 @@ def get_connections(db: Session = Depends(database.get_db)):
 
 
 @router.get("/{connection_id}", response_model=ConnectionDetailResponse)
-def get_connection_detail(connection_id: int, db: Session = Depends(database.get_db)):
+def get_connection_detail(connection_id: int, db: Session = Depends(models.get_db)):
     repository = ConnectionRepository(db)
     try:
         connection = repository.find(connection_id)
@@ -57,7 +57,7 @@ def get_connection_detail(connection_id: int, db: Session = Depends(database.get
 
 
 @router.delete("/{connection_id}", response_model=ConnectionDeleteResponse)
-def delete_connection(connection_id: int, db: Session = Depends(database.get_db)):
+def delete_connection(connection_id: int, db: Session = Depends(models.get_db)):
     repository = ConnectionRepository(db)
     try:
         repository.delete(connection_id)
@@ -73,7 +73,7 @@ def delete_connection(connection_id: int, db: Session = Depends(database.get_db)
 
 
 @router.post("/connect", response_model=ConnectionTestResponse)
-def establish_connection(request_payload: ConnectionTestRequest, db: Session = Depends(database.get_db)):
+def establish_connection(request_payload: ConnectionTestRequest, db: Session = Depends(models.get_db)):
     connection_id = request_payload.connection_id
     repository = ConnectionRepository(db)
     try:

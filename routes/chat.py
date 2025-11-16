@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from config import database
+from database import models, repositories
 from sqlalchemy.orm import Session
 from routes.models import *
 import utilities
@@ -18,10 +18,11 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 @router.post("/")
-def chat(request_payload: ChatRequest, db: Session = Depends(database.get_db)):
+def chat(request_payload: ChatRequest, db: Session = Depends(models.get_db)):
     user_question = request_payload.question  # Used in user prompt
     connection_id = request_payload.connection_id
-    connection = db.query(database.Connection).filter(database.Connection.id == connection_id).first()
+    repository = repositories.ConnectionRepository(db)
+    connection = repository.find(connection_id)
     db_schema = connection.db_schema  # Used in system prompt
 
     # Step 1: Generate SQL from user query
