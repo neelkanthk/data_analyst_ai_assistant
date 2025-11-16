@@ -47,21 +47,21 @@ def chat(request_payload: ChatRequest, db: Session = Depends(database.get_db)):
             Use following Database Schema to create the SQL query: {db_schema}
         """
 
-    # provider = InferenceProviderFactory.create(
-    #     InferenceProviderType.GEMINI, api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
-
     provider = InferenceProviderFactory.create(
-        InferenceProviderType.BEDROCK, api_key=os.getenv("AWS_BEDROCK_API_KEY"), base_url=os.getenv("AWS_BEDROCK_BASE_URL"))
+        InferenceProviderType.GEMINI, api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
+
+    # provider = InferenceProviderFactory.create(
+    #     InferenceProviderType.BEDROCK, api_key=os.getenv("AWS_BEDROCK_API_KEY"), base_url=os.getenv("AWS_BEDROCK_BASE_URL"))
+    # openai.gpt-oss-20b-1:0
 
     client = InferenceProviderClient(provider)
 
     # Step 1: Use AI service to convert question in Natural Language to SQL
-    response = client.ask(model_name="openai.gpt-oss-20b-1:0", system_prompt=system_prompt, user_prompt=user_question)
-    print(response)
+    response = client.ask(model_name="gemini-2.5-flash", system_prompt=system_prompt, user_prompt=user_question)
 
     # Step 2: Extract SQL query from the LLM response
     sql_query = utilities.query_extractor(response)
-    print(sql_query)
+
     # Step 3: Basic SQL validation
     is_safe_sql = utilities.is_safe_sql(sql_query)
 
